@@ -22,6 +22,8 @@ from werkzeug import secure_filename
 site = Flask(__name__)
 
 UPLOAD_FOLDER = "."
+# where are the images being displayed?
+DISPLAY_URL = "http://www.example.org"
 ALLOWED_EXT = set(["png", "jpeg", "jpg", "gif"])
 USERS = {}
 
@@ -116,7 +118,7 @@ def upload():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file.save(os.path.join(site.config["UPLOAD_FOLDER"], filename))
-            return render_template("upload.html", uploaded=True, success=True)
+            return redirect((os.path.join(DISPLAY_URL, filename)))
         else:
             return render_template("upload.html", uploaded=True, success=False)
     else:
