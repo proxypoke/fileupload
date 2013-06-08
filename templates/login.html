@@ -1,0 +1,28 @@
+<!doctype html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+    <form method="post">
+        <input type="text" name="user"> User<br>
+        <input type="text" name="pass"> Pass<br>
+        <input type="submit" value="h">
+    </form>
+    {% if nouser %}
+    No user given.
+    {% endif %}
+    {% if nopass %}
+    Password please.
+    {% endif %}
+    {% if unknown_user %}
+    Who the fuck are you? Fuck off.
+    {% endif %}
+    {% if login %}
+    {% if success %}
+    h {{ user }}
+    {% else %}
+    no u
+    {% endif %}
+    {% endif %}
+
+</body>
