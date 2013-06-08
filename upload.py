@@ -1,133 +1,52 @@
 #! /usr/bin/env python2
 #  -*- coding: utf-8 -*-
 #
-# fileupload.py - braindead file uploder. don't use. ever.
+# fileuploader - braindead file uploader. don't use. ever.
 #
 # Author: slowpoke <mail+git@slowpoke.io>
 #
 # This program is free software under the non-terms
 # of the Anti-License. Do whatever the fuck you want.
 
-import os
-import json
-import base64
-
-from flask import Flask
-from flask import request
-from flask import render_template
-from flask import session
-from flask import redirect
-from werkzeug import secure_filename
-
-site = Flask(__name__)
-
-UPLOAD_FOLDER = "."
-# where are the images being displayed?
-DISPLAY_URL = "http://www.example.org"
-ALLOWED_EXT = set(["png", "jpeg", "jpg", "gif"])
-USERS = {}
+import requests
+import argparse
 
 
-def allowed_file(filename):
-    return '.' in filename and \
-        filename.rsplit('.', 1)[1] in ALLOWED_EXT
+def login(url, user, passwd):
+    '''Get session cookies.'''
+    r = requests.post(url, data={"user": user, "pass": passwd})
+    r.raise_for_status()
+    return r.cookies
 
 
-def load_users(file):
-    '''(Re)load the users.json file.'''
-    if not os.access(file, os.F_OK):
-        return
-    with open(file) as f:
-        global USERS
+def upload(url, filename, cookies):
+    '''Upload a given file. Return the url of the uploaded file.'''
+    with open(filename, 'r') as file:
+        r = requests.post(url, files={"file": file}, cookies=cookies)
+        r.raise_for_status()
+        return r.url
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("files", type=str, help="the files to upload",
+                        nargs="+")
+    parser.add_argument("-u", "--user", type=str, help="user for the server",
+                        required=True)
+    parser.add_argument("-p", "--pass", type=str, help="password for the server",
+                        required=True, dest="passwd")
+
+    args = parser.parse_args()
+
+    url = "http://i.slowpoke.io"
+    cookies = login(url + "/login", args.user, args.passwd)
+    for file in args.files:
         try:
-            USERS = json.load(f)
-        except ValueError:
-            return  # no, we really don't care
-
-
-def save_users(file):
-    '''Save the users.json file.'''
-    with open(file, 'w') as f:
-        json.dump(USERS, f)
-
-
-@site.route("/adduser", methods=["GET", "POST"])
-def add_user():
-    '''Add a new user with a randomly generated key and return the key.'''
-    if not session.get("loggedin", False):
-        return '''gtfo'''
-    if request.method == "POST":
-        user = request.form.get("user")
-        if not user:
-            return '''wat'''
-        else:
-            global USERS
-            USERS[user] = base64.encodestring(os.urandom(24)).decode().strip("\n")
-            save_users("users.json")
-            return '''{0}'s key is now {1}'''.format(user, USERS[user])
-    else:
-        return render_template("adduser.html")
-
-
-@site.route("/login", methods=["GET", "POST"])
-def login():
-    if session.get("loggedin", False):
-        return redirect("/status")
-    if request.method == "POST":
-        user = request.form.get("user").strip("\n")
-        if not user:
-            return render_template("login.html", nouser=True)
-        if not user in USERS.keys():
-            return render_template("login.html", unknown_user=True)
-        passwd = request.form.get("pass")
-        print(passwd)
-        print(USERS[user])
-        if not passwd:
-            return render_template("login.html", nopass=True)
-        if passwd == USERS[user]:
-            session["loggedin"] = True
-            return render_template("login.html", login=True, success=True,
-                                   user=user)
-        else:
-            return render_template("login.html", login=True, success=False)
-    else:
-        return render_template("login.html")
-
-
-@site.route("/logout")
-def logout():
-    if not session.get('loggedin', False):
-        return '''Wat. I don't know you.'''
-    else:
-        session["loggedin"] = False
-        return '''Bye.'''
-
-
-@site.route("/status")
-def status():
-    return render_template("status.html",
-                           loggedin=session.get("loggedin", False))
-
-
-@site.route("/upload", methods=["GET", "POST"])
-def upload():
-    if not session.get("loggedin", False):
-        return '''Nothing to see here, move along.'''
-    if request.method == "POST":
-        file = request.files["file"]
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(site.config["UPLOAD_FOLDER"], filename))
-            return redirect((os.path.join(DISPLAY_URL, filename)))
-        else:
-            return render_template("upload.html", uploaded=True, success=False)
-    else:
-        return render_template("upload.html", uploaded=False)
-    return
-
+            url = upload(url + "/upload", file, cookies)
+            print("File uploaded: {0}".format(url))
+        except Exception as e:
+            print("Failed to upload {0}: {1}".format(url, e))
 
 if __name__ == "__main__":
-    load_users("users.json")
-    site.secret_key = os.urandom(24)
-    site.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-    site.run()
+    main()
