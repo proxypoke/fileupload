@@ -87,7 +87,7 @@ def login():
             return render_template("login.html", login=True, success=True,
                                    user=user)
         else:
-            return render_template("login.html", login=True, success=False)
+            return render_template("login.html", login=True, success=False), 403
     else:
         return render_template("login.html")
 
@@ -110,7 +110,7 @@ def status():
 @site.route("/upload", methods=["GET", "POST"])
 def upload():
     if not session.get("loggedin", False):
-        return '''Nothing to see here, move along.'''
+        return '''Nothing to see here, move along.''', 403
     if request.method == "POST":
         file = request.files["file"]
         if file and allowed_file(file.filename):
