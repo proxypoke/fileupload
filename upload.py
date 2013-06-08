@@ -60,7 +60,7 @@ def add_user():
             return '''wat'''
         else:
             global USERS
-            USERS[user] = base64.encodestring(os.urandom(24)).decode()
+            USERS[user] = base64.encodestring(os.urandom(24)).decode().strip("\n")
             save_users("users.json")
             return '''{0}'s key is now {1}'''.format(user, USERS[user])
     else:
@@ -72,7 +72,7 @@ def login():
     if session.get("loggedin", False):
         return redirect("/status")
     if request.method == "POST":
-        user = request.form.get("user")
+        user = request.form.get("user").strip("\n")
         if not user:
             return render_template("login.html", nouser=True)
         if not user in USERS.keys():
